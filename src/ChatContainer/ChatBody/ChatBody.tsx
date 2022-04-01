@@ -7,61 +7,67 @@ import {gql, useLazyQuery, useMutation, useQuery} from "@apollo/client";
 import Message from "../../TransferObjects/Message";
 import {GET_MESSAGES, GET_MORE_MESSAGES, POST_MESSAGE} from "../../client";
 
-
 function sortMessagesByDate(first: Message, second: Message) {
     const firstDate = new Date(first.datetime)
     const secondDate = new Date(second.datetime)
     return +firstDate - +secondDate
 }
 
-function getFinalMessages(data: Message[], dataMore: Message[], dataFromLatest: Message[]): Message[] {
-    if(dataMore && dataMore.length) return [...dataMore]
-    else if(dataFromLatest && dataFromLatest.length) return [...dataFromLatest]
-    return [...data]
-}
-
-function useFetchLatestOrFetchMoreQuery(channel: Channel, user: string) : {messages: Message[], loading: boolean, refetchLatest: any, getMoreMessagesQuery: any} {
-    const [messagesFromLatestQuery, setMessagesFromLatestQuery] = useState<Message[] | null>(null)
-
-    const {loading, data, error, refetch: refetchLatest} = useQuery(GET_MESSAGES,
-        {variables: {
-            channelId: Channel[channel]},
-            pollInterval: 0})
-
-    const messages: Message[] = data ? data.fetchLatestMessages : []
-
-
-    const [getMoreMessagesQuery, {loading: loadingMore, data: dataMore, error: errorMore, called}] = useLazyQuery(GET_MORE_MESSAGES,
-        {variables: {
-                channelId: Channel[channel],
-                messageId: '0'
-            }})
-
-    const messagesMore: Message[] = !loadingMore && dataMore? dataMore.fetchMoreMessages : []
-
-    if(dataMore && dataMore.fetchMoreMessages && dataMore.fetchMoreMessages.length && dataMore.fetchMoreMessages !== messagesFromLatestQuery){
-        setMessagesFromLatestQuery(dataMore.fetchMoreMessages)
-    }
-    useEffect(() => { refetchLatest() }, [channel, user])
-
-    const finalMessages =  getFinalMessages(messages, messagesMore, messagesFromLatestQuery || [])
-
-    return {messages: finalMessages.sort(sortMessagesByDate), loading: loading || loadingMore, refetchLatest, getMoreMessagesQuery}
-}
+const POLLING_INTERVAL = 2000
 
 export function ChatBody() {
-
-
     const {channel, user} = useContext(ChatOptionsContext)
     const [newMessage, setNewMessage] = useState<string>(localStorage.getItem('newMessage') || '')
+    const [tempMessageAfterServerError, setTempMessageAfterServerError] = useState<Message | null>()
+    const [messagesFromLatestQuery, setMessagesFromLatestQuery] = useState<Message[]>([])
 
-    const {messages, loading, refetchLatest, getMoreMessagesQuery} = useFetchLatestOrFetchMoreQuery(channel, user)
-    const [postMessage, {loading: loadingPostMessage, error}] = useMutation(POST_MESSAGE, {variables: {
+
+    const {loading, data, error, startPolling, stopPolling, refetch} = useQuery(GET_MESSAGES,
+        {variables: {
+                channelId: Channel[channel]},
+            pollInterval: POLLING_INTERVAL,
+        })
+
+    useEffect(() => {
+        if(error){
+            console.log(error)
+        }
+        if(!loading && data && !error){
+            const sortedMessages = [...data.fetchLatestMessages].sort(sortMessagesByDate)
+            setMessagesFromLatestQuery(sortedMessages)
+        }
+    }, [loading, data, error])
+
+    useEffect(() => { refetch() }, [channel, user])
+
+
+    const [getMoreMessagesQuery, {loading: loadingFromMoreMessagesQuery, data: dataFromMoreMessagesQuery, error: errorFromMoreMessagesQuery, called, variables}] = useLazyQuery(GET_MORE_MESSAGES,
+        {variables: {
+                channelId: Channel[channel],
+                messageId: '0',
+                old: false,
+            },
+        })
+
+    useEffect(() => {
+        if(errorFromMoreMessagesQuery){
+            console.log(errorFromMoreMessagesQuery)
+        }
+        if(!loadingFromMoreMessagesQuery && dataFromMoreMessagesQuery && !errorFromMoreMessagesQuery){
+                const sortedMessages = [...dataFromMoreMessagesQuery.fetchMoreMessages].sort(sortMessagesByDate)
+                if(!sortedMessages.length){
+                    if(variables && !variables.old) startPolling(POLLING_INTERVAL)
+                    return
+                }
+                setMessagesFromLatestQuery(sortedMessages)
+        }
+    }, [loadingFromMoreMessagesQuery, dataFromMoreMessagesQuery, errorFromMoreMessagesQuery, variables])
+
+    const [postMessage, {}] = useMutation(POST_MESSAGE, {variables: {
             channelId: Channel[channel],
             text: newMessage,
             userId: user,
         }})
-
 
 
     const handleMessageChange = (event: React.FormEvent<HTMLTextAreaElement>) => {
@@ -71,11 +77,12 @@ export function ChatBody() {
 
     const getMoreMessages = (old: boolean, messageId: string) => {
         getMoreMessagesQuery({variables: {old, messageId, channelId: Channel[channel]}})
+        stopPolling()
     }
 
     const sendMessage = () => {
         newMessage && postMessage({onCompleted: () => {
-            refetchLatest();
+            refetch()
             setNewMessage('')
             }, onError: (error) => {
                 alert('An error occured. Please try again')
@@ -90,7 +97,7 @@ export function ChatBody() {
                 <span>{Channel[channel]} Channel</span>
             </div>
             <div className="chat-container">
-                <MessagesList messages={messages} getMoreMessages={getMoreMessages} />
+                <MessagesList messages={tempMessageAfterServerError ? [...messagesFromLatestQuery,  tempMessageAfterServerError] : messagesFromLatestQuery} getMoreMessages={getMoreMessages} />
                 <NewMessage message={newMessage} onBlur={handleMessageChange} onChange={handleMessageChange} sendMessage={sendMessage} />
             </div>
         </div>
