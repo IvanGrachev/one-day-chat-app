@@ -1,0 +1,9 @@
+.active-channel {
+    background-color: #ffffff;
+    background-image: -webkit-linear-gradient(right, #f7f9fb, #ffffff);
+    background-image: -webkit-gradient(linear, left top, left bottom, from(#f7f9fb), to(#ffffff));
+    background-image: -moz-linear-gradient(right, #f7f9fb, #ffffff);
+    background-image: -ms-linear-gradient(right, #f7f9fb, #ffffff);
+    background-image: -o-linear-gradient(right, #f7f9fb, #ffffff);
+    /*background-image: linear-gradient(right, #f7f9fb, #ffffff)*/
+}

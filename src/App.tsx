@@ -9,17 +9,17 @@ import client from "./client";
 
 
 function App() {
-  const chatOptionsValue = useChatOptionsContextValue()
-  return (
-    <>
-      <ApolloProvider client={client} >
-        <ChatOptionsContext.Provider value={chatOptionsValue}>
-          <Header />
-          <ChatContainer />
-        </ChatOptionsContext.Provider>
-      </ApolloProvider>
-    </>
-  );
+    const chatOptionsValue = useChatOptionsContextValue()
+    return (
+        <>
+            <ApolloProvider client={client}>
+                <ChatOptionsContext.Provider value={chatOptionsValue}>
+                    <Header/>
+                    <ChatContainer/>
+                </ChatOptionsContext.Provider>
+            </ApolloProvider>
+        </>
+    );
 }
 
 export default App;

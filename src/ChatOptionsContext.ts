@@ -1,6 +1,6 @@
-import React, {createContext, useState} from 'react';
-import User from "./TransferObjects/Users";
-import Channel from "./TransferObjects/Channels";
+import {createContext, useState} from 'react';
+import User from "./Types/Users";
+import Channel from "./Types/Channels";
 
 export interface ChatOptions {
     user: User;
@@ -11,16 +11,18 @@ export interface ChatOptions {
 
 
 const localStorageUser = localStorage.getItem('user')
-const defaultUser = localStorageUser === null ? User.Joyse : <User> localStorageUser
+const defaultUser = localStorageUser === null ? User.Joyse : <User>localStorageUser
 
 const localStorageChannel = localStorage.getItem('channel')
-const defaultChannel = localStorageChannel === null ? Channel.General : <Channel> +localStorageChannel
+const defaultChannel = localStorageChannel === null ? Channel.General : <Channel>+localStorageChannel
 
 export const chatOptionsDefault: ChatOptions = {
     user: defaultUser,
     channel: defaultChannel,
-    setUser: (user) => {},
-    setChannel: (channel) => {},
+    setUser: (user) => {
+    },
+    setChannel: (channel) => {
+    },
 }
 
 export function useChatOptionsContextValue(): ChatOptions {

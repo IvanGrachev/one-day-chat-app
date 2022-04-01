@@ -1,7 +1,7 @@
 export enum Channel {
     General = 1,
     LGTM,
-    Technology ,
+    Technology,
 }
 
 export default Channel
